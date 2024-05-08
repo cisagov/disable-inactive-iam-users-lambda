@@ -19,7 +19,7 @@ updates:
       - dependency-name: hashicorp/setup-terraform
       - dependency-name: mxschmitt/action-tmate
       - dependency-name: step-security/harden-runner
-      # Managed by cisagov/skeleton-aws-lambda-python
+      # # Managed by cisagov/skeleton-aws-lambda-python
       # - dependency-name: actions/upload-artifact
     package-ecosystem: github-actions
     schedule:
