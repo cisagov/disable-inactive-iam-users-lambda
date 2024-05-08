@@ -179,7 +179,7 @@ jobs:
           egress-policy: audit
       - id: setup-env
         uses: cisagov/setup-env-github-action@develop
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: setup-python
         uses: actions/setup-python@v4
         with:
@@ -225,7 +225,7 @@ jobs:
         uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get the short SHA for the commit being used
         run: |
           echo "GH_SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
