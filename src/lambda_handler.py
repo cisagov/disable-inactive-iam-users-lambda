@@ -95,16 +95,39 @@ def task_disable(event):
     for page in user_paginator.paginate():
         for user in page["Users"]:
             user_name = user["UserName"]
+            # This value may be None if the user has never logged in.
             password_last_used = user["PasswordLastUsed"]
 
-            logging.debug("Examining user %s's console access", user_name)
+            login_profile = None
+            try:
+                login_profile = iam.get_login_profile(UserName=user_name)[
+                    "LoginProfile"
+                ]
+            except boto3.IAM.Client.exceptions.NoSuchEntityException:
+                logging.debug("User %s does not have console access.", user_name)
 
-            if now - password_last_used > too_old:
-                logging.info(
-                    "Disabling user %s's console access due to inactivity", user_name
-                )
-                # Disable the user's console access
-                # iam.delete_login_profile(UserName=user_name)
+            if login_profile:
+                logging.debug("Examining user %s's console access", user_name)
+                login_profile_create = login_profile["CreateDate"]
+
+                # This if skips any users that were created recently but have
+                # not yet logged in.  We don't want to disable their access
+                # yet.
+                if now - login_profile_create > too_old:
+                    # Disable console access for any users who have never
+                    # logged in or have not logged in sufficiently recently.
+                    if password_last_used is None or now - password_last_used > too_old:
+                        logging.info(
+                            "Disabling user %s's console access due to inactivity",
+                            user_name,
+                        )
+                        # Disable the user's console access
+                        # iam.delete_login_profile(UserName=user_name)
+                else:
+                    logging.debug(
+                        "User %s's console access created too recently for inactivity to be determined.",
+                        user_name,
+                    )
 
             # Create a paginator for the current user's access keys
             access_key_paginator = iam.get_paginator("list_access_keys")
