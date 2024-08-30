@@ -96,7 +96,7 @@ Lambda:
 
 The easiest way to deploy the Lambda and related resources is to use
 the
-[cisagov/disable-inactive-iam-users-terraform](https://github.com/cisagov/disable-inactive-iam-users-terraform)
+[cisagov/disable-inactive-iam-users-tf-module](https://github.com/cisagov/disable-inactive-iam-users-tf-module)
 repository.  Refer to the documentation in that project for more
 information.
 
