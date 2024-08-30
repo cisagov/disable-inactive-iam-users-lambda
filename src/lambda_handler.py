@@ -180,6 +180,12 @@ def task_disable(event):
                                 user_name,
                                 access_key_id,
                             )
+                    else:
+                        logging.debug(
+                            "User %s's access key %s is already inactive.",
+                            user_name,
+                            access_key_id,
+                        )
 
     result["message"] = "Successfully disabled access for inactive IAM users."
     logging.info(result["message"])
