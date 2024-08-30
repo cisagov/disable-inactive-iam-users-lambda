@@ -50,14 +50,14 @@ def validate_event_data(event: Dict[str, Any]) -> EventValidation:
     if "expiration_days" not in event:
         errors.append('Missing required key "expiration_days" in event.')
     elif not event["expiration_days"]:
-        errors.append('"account_ids" must be non-null.')
+        errors.append('"expiration_days" must be non-null.')
     else:
         try:
             tmp = int(event["expiration_days"])
             if tmp <= 0:
-                errors.append('"account_ids" must be a strictly positive integer.')
+                errors.append('"expiration_days" must be a strictly positive integer.')
         except ValueError:
-            errors.append('"account_ids" must be an integer.')
+            errors.append('"expiration_days" must be an integer.')
 
     if errors:
         result = False
