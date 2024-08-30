@@ -54,7 +54,7 @@ def validate_event_data(event: Dict[str, Any]) -> EventValidation:
     else:
         try:
             tmp = int(event["expiration_days"])
-            if tmp < 0:
+            if tmp <= 0:
                 errors.append('"account_ids" must be a strictly positive integer.')
         except ValueError:
             errors.append('"account_ids" must be an integer.')
