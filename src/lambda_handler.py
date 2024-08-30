@@ -126,7 +126,7 @@ def task_disable(event):
                             user_name,
                         )
                         # Disable the user's console access
-                        # iam.delete_login_profile(UserName=user_name)
+                        iam.delete_login_profile(UserName=user_name)
                 else:
                     logging.debug(
                         "User %s's console access created too recently for inactivity to be determined.",
@@ -173,7 +173,11 @@ def task_disable(event):
                                     access_key_id,
                                 )
                                 # Make the access key inactive
-                                # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
+                                iam.update_access_key(
+                                    AccessKeyId=access_key_id,
+                                    Status="Inactive",
+                                    UserName=user_name,
+                                )
                         else:
                             logging.debug(
                                 "User %s's access key %s created too recently for inactivity to be determined.",
