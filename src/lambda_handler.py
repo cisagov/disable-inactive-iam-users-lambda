@@ -103,7 +103,7 @@ def task_disable(event):
                 login_profile = iam.get_login_profile(UserName=user_name)[
                     "LoginProfile"
                 ]
-            except boto3.IAM.Client.exceptions.NoSuchEntityException:
+            except iam.exceptions.NoSuchEntityException:
                 logging.debug("User %s does not have console access.", user_name)
 
             if login_profile:
