@@ -137,6 +137,9 @@ def task_disable(event):
             for page in access_key_paginator.paginate(UserName=user_name):
                 for access_key in page["AccessKeyMetadata"]:
                     access_key_id = access_key["AccessKeyId"]
+                    access_key_create = access_key["CreateDate"]
+                    # This value may be None if the user has never used this
+                    # access key.
                     access_key_last_used = iam.get_access_key_last_used(
                         AccessKeyId=access_key_id
                     )
@@ -150,14 +153,29 @@ def task_disable(event):
                             access_key_id,
                         )
 
-                        if now - access_key_last_used > too_old:
-                            logging.info(
-                                "Disabling user %s's access key %s due to inactivity",
+                        # This if skips any access keys that were created
+                        # recently but have not yet been used.  We don't want
+                        # to disable such keys yet.
+                        if now - access_key_create > too_old:
+                            # Disable access keys that have never been used or
+                            # that have not been used sufficiently recently.
+                            if (
+                                access_key_last_used is None
+                                or now - access_key_last_used > too_old
+                            ):
+                                logging.info(
+                                    "Disabling user %s's access key %s due to inactivity",
+                                    user_name,
+                                    access_key_id,
+                                )
+                                # Make the access key inactive
+                                # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
+                        else:
+                            logging.debug(
+                                "User %s's access key %s created too recently for inactivity to be determined.",
                                 user_name,
                                 access_key_id,
                             )
-                            # Make the access key inactive
-                            # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
 
     result["message"] = "Successfully disabled access for inactive IAM users."
     logging.info(result["message"])
