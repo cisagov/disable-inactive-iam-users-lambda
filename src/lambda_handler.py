@@ -84,8 +84,12 @@ def task_disable(event):
     # Create an IAM client
     iam: boto3.client = boto3.client("iam")
 
-    # Capture the current time and date
-    now = datetime.now()
+    # Capture the current time and date.
+    #
+    # Note that Python requires a little trickery to create a datetime object
+    # with the current time _and_ the timezone information set to the local
+    # system timezone.
+    now = datetime.now(timezone.utc).astimezone()
     too_old = timedelta(days=expiration_days)
 
     # Create a paginator for users
