@@ -118,18 +118,23 @@ def task_disable(event):
                         AccessKeyId=access_key_id
                     )
 
-                    logging.debug(
-                        "Examining user %s's access key %s", user_name, access_key_id
-                    )
-
-                    if now - access_key_last_used > too_old:
-                        logging.info(
-                            "Disabling user %s's access key %s due to inactivity",
+                    # We can safely ignore any access keys that are already
+                    # inactive
+                    if access_key["Status"] == "Active":
+                        logging.debug(
+                            "Examining user %s's active access key %s",
                             user_name,
                             access_key_id,
                         )
-                        # Make the access key inactive
-                        # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
+
+                        if now - access_key_last_used > too_old:
+                            logging.info(
+                                "Disabling user %s's access key %s due to inactivity",
+                                user_name,
+                                access_key_id,
+                            )
+                            # Make the access key inactive
+                            # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
 
     result["message"] = "Successfully disabled access for inactive IAM users."
     logging.info(result["message"])
