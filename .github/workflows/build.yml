@@ -10,6 +10,7 @@ on:
   repository_dispatch:
     types:
       - apb
+  workflow_dispatch:
 
 # Set a default shell for any run steps. The `-Eueo pipefail` sets errtrace,
 # nounset, errexit, and pipefail. The `-x` will print all commands as they are
