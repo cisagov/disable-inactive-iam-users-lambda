@@ -84,55 +84,54 @@ def task_disable(event):
     # Create an IAM client
     iam: boto3.client = boto3.client("iam")
 
-    # Create a paginator for users
-    user_paginator = iam.get_paginator("list_users")
-
-    # Create an iterator from the paginator
-    user_iterator = user_paginator.paginate()
-
     # Capture the current time and date
     now = datetime.now()
     too_old = timedelta(days=expiration_days)
 
+    # Create a paginator for users
+    user_paginator = iam.get_paginator("list_users")
+
     # Iterate over the users
-    for user in user_iterator:
-        user_name = user["UserName"]
-        password_last_used = user["PasswordLastUsed"]
+    for page in user_paginator.paginate():
+        for user in page["Users"]:
+            user_name = user["UserName"]
+            password_last_used = user["PasswordLastUsed"]
 
-        logging.debug("Examining user %s's console access", user_name)
+            logging.debug("Examining user %s's console access", user_name)
 
-        if now - password_last_used > too_old:
-            logging.info(
-                "Disabling user %s's console access due to inactivity", user_name
-            )
-            # Disable the user's console access
-            # iam.delete_login_profile(UserName=user_name)
-
-        # Create a paginator for access keys
-        access_key_paginator = iam.get_paginator("list_access_keys")
-
-        # Create an iterator from the paginator
-        access_key_iterator = access_key_paginator.paginate(UserName=user_name)
-
-        logging.debug("Examining user %s's access keys", user_name)
-        # Iterate over the access keys
-        for access_key in access_key_iterator:
-            access_key_id = access_key["AccessKeyId"]
-            access_key_last_used = iam.get_access_key_last_used(
-                AccessKeyId=access_key_id
-            )
-
-            logging.debug("Examining user %s's access key %s", user_name, access_key_id)
-
-            if now - access_key_last_used > too_old:
+            if now - password_last_used > too_old:
                 logging.info(
-                    "Disabling user %s's access key %s due to inactivity",
-                    user_name,
-                    access_key_id,
+                    "Disabling user %s's console access due to inactivity", user_name
                 )
-                # Make the access key inactive
-                # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
-    result["message"] = "Successfully disabled inactive IAM users."
+                # Disable the user's console access
+                # iam.delete_login_profile(UserName=user_name)
+
+            # Create a paginator for the current user's access keys
+            access_key_paginator = iam.get_paginator("list_access_keys")
+
+            logging.debug("Examining user %s's access keys", user_name)
+            # Iterate over the access keys
+            for page in access_key_paginator.paginate(UserName=user_name):
+                for access_key in page["AccessKeyMetadata"]:
+                    access_key_id = access_key["AccessKeyId"]
+                    access_key_last_used = iam.get_access_key_last_used(
+                        AccessKeyId=access_key_id
+                    )
+
+                    logging.debug(
+                        "Examining user %s's access key %s", user_name, access_key_id
+                    )
+
+                    if now - access_key_last_used > too_old:
+                        logging.info(
+                            "Disabling user %s's access key %s due to inactivity",
+                            user_name,
+                            access_key_id,
+                        )
+                        # Make the access key inactive
+                        # iam.update_access_key(AccessKeyId=access_key_id, Status="Inactive", UserName=user_name)
+
+    result["message"] = "Successfully disabled access for inactive IAM users."
     logging.info(result["message"])
     return result
 
