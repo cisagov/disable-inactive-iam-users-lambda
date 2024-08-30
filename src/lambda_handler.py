@@ -100,7 +100,7 @@ def task_disable(event):
         for user in page["Users"]:
             user_name = user["UserName"]
             # This value may be None if the user has never logged in.
-            password_last_used = user["PasswordLastUsed"]
+            password_last_used = user.get("PasswordLastUsed", None)
 
             login_profile = None
             try:
