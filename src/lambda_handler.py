@@ -146,7 +146,7 @@ def task_disable(event):
                     # access key.
                     access_key_last_used = iam.get_access_key_last_used(
                         AccessKeyId=access_key_id
-                    )
+                    )["AccessKeyLastUsed"]["LastUsedDate"]
 
                     # We can safely ignore any access keys that are already
                     # inactive
