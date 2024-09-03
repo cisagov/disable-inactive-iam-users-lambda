@@ -66,7 +66,12 @@ def validate_event_data(event: Dict[str, Any]) -> EventValidation:
 
 
 def task_disable(event):
-    """Iterate over users and disable any inactive access."""
+    """Iterate over users and disable any inactive access.
+
+    :param event: The event dict that contains the parameters sent when
+    the function is invoked.
+    :return: The result of the action.
+    """
     result: Dict[str, Union[Optional[str], bool]] = {"message": None, "success": True}
 
     # Validate all event data before going any further
