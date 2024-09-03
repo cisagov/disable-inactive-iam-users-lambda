@@ -84,13 +84,13 @@ def task_disable(event):
     # Create an IAM client
     iam: boto3.client = boto3.client("iam")
 
-    # Capture the current time and date.
+    # Determine the cutoff.  Any access not used after this datetime will be
+    # disabled.
     #
     # Note that Python requires a little trickery to create a datetime object
     # with the current time _and_ the timezone information set to the local
     # system timezone.
-    now = datetime.now(timezone.utc).astimezone()
-    too_old = timedelta(days=expiration_days)
+    cutoff = datetime.now(timezone.utc).astimezone() - timedelta(days=expiration_days)
 
     # Create a paginator for users
     user_paginator = iam.get_paginator("list_users")
@@ -117,10 +117,10 @@ def task_disable(event):
                 # This if skips any users that were created recently but have
                 # not yet logged in.  We don't want to disable their access
                 # yet.
-                if now - login_profile_create > too_old:
+                if login_profile_create < cutoff:
                     # Disable console access for any users who have never
                     # logged in or have not logged in sufficiently recently.
-                    if password_last_used is None or now - password_last_used > too_old:
+                    if password_last_used is None or password_last_used < cutoff:
                         logging.info(
                             "Disabling user %s's console access due to inactivity",
                             user_name,
@@ -160,12 +160,12 @@ def task_disable(event):
                         # This if skips any access keys that were created
                         # recently but have not yet been used.  We don't want
                         # to disable such keys yet.
-                        if now - access_key_create > too_old:
+                        if access_key_create < cutoff:
                             # Disable access keys that have never been used or
                             # that have not been used sufficiently recently.
                             if (
                                 access_key_last_used is None
-                                or now - access_key_last_used > too_old
+                                or access_key_last_used < cutoff
                             ):
                                 logging.info(
                                     "Disabling user %s's access key %s due to inactivity",
