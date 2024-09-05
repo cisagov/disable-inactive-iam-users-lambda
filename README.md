@@ -2,13 +2,9 @@
 
 [![GitHub Build Status](https://github.com/cisagov/disable-inactive-iam-users-lambda/workflows/build/badge.svg)](https://github.com/cisagov/disable-inactive-iam-users-lambda/actions)
 
-This is a generic skeleton project that can be used to quickly get a
-new [cisagov](https://github.com/cisagov) GitHub
-[AWS Lambda](https://aws.amazon.com/lambda/) project using the Python runtimes
-started. This skeleton project contains [licensing information](LICENSE), as
-well as [pre-commit hooks](https://pre-commit.com) and
-[GitHub Actions](https://github.com/features/actions) configurations
-appropriate for the major languages that we use.
+This repository contains the code for an AWS Lambda function that
+disables access for users who have not used said access sufficiently
+recently.
 
 ## Building the base Lambda image ##
 
@@ -57,6 +53,13 @@ Once you are finished you can stop the detached container with the following com
 docker compose down
 ```
 
+To customize the name of the deployment file, you can override the
+`BUILD_FILE_NAME` environment variable.  For example:
+
+```console
+BUILD_FILE_NAME="disable_inactive_iam_users_lambda.zip" docker compose up build_deployment_package
+```
+
 ## How to update Python dependencies ##
 
 The Python dependencies are maintained using a [Pipenv](https://github.com/pypa/pipenv)
@@ -72,12 +75,30 @@ cd src/py3.9
 pipenv lock
 ```
 
-## New Repositories from a Skeleton ##
+## Lambda inputs ##
 
-Please see our [Project Setup guide](https://github.com/cisagov/development-guide/tree/develop/project_setup)
-for step-by-step instructions on how to start a new repository from
-a skeleton. This will save you time and effort when configuring a
-new repository!
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| expiration_days | A strictly positive integer denoting the number of days after which an IAM user's access is considered inactive if unused. | `number` | n/a | yes |
+
+## Example Lambda input ##
+
+The following is an example of the JSON input event that is expected by the
+Lambda:
+
+```json
+{
+    "expiration_days": 45
+}
+```
+
+## Deploying the Lambda ##
+
+The easiest way to deploy the Lambda and related resources is to use
+the
+[cisagov/disable-inactive-iam-users-tf-module](https://github.com/cisagov/disable-inactive-iam-users-tf-module)
+repository.  Refer to the documentation in that project for more
+information.
 
 ## Contributing ##
 

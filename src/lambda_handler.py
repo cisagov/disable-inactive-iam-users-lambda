@@ -1,21 +1,25 @@
-"""Simple AWS Lambda handler to verify functionality."""
+"""AWS Lambda handler to disable inactive IAM users."""
 
 # Standard Python Libraries
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import os
-from typing import Any, Optional, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 # Third-Party Libraries
-import cowsay
-import cowsay.characters
-
-# cisagov Libraries
-from example import example_div
+import boto3
 
 default_log_level = "INFO"
 logger = logging.getLogger()
 logger.setLevel(default_log_level)
+
+
+class EventValidation(NamedTuple):
+    """Named tuple to hold event validation information."""
+
+    errors: List[str]
+    event: Dict[str, Any]
+    valid: bool
 
 
 def failed_task(result: dict[str, Any], error_msg: str) -> None:
@@ -36,50 +40,164 @@ def task_default(event):
     return result
 
 
-def task_cowsay(event) -> dict[str, Union[Optional[str], bool]]:
-    """Generate an output message using the provided information."""
-    result: dict[str, Union[Optional[str], bool]] = {"message": None, "success": True}
+def validate_event_data(event: Dict[str, Any]) -> EventValidation:
+    """Validate the event data and return a tuple containing the validated event, a boolean result (True if valid, False if invalid), and a list of error message strings."""
+    result = True
+    errors = []
 
-    character: str = event.get("character", "tux")
-    if character not in cowsay.characters.CHARS.keys():
-        error_msg = 'Character "%s" is not valid.'
-        logging.error(error_msg, character)
-        failed_task(result, error_msg % character)
-    else:
-        contents: str = event.get("contents", "Hello from AWS Lambda!")
-        logger.info(
-            'Creating output using "%s" with contents "%s"', character, contents
-        )
-        result["message"] = cowsay.get_output_string(character, contents)
-
-    return result
-
-
-def task_divide(event) -> dict[str, Union[Optional[float], bool]]:
-    """Divide one number by another and provide the result."""
-    result: dict[str, Union[Optional[float], bool]] = {"result": None, "success": True}
-    numerator: str = event.get("numerator", None)
-    denominator: str = event.get("denominator", None)
-
-    if denominator is None or numerator is None:
-        error_msg = "Request must include both a numerator and a denominator."
-        logging.error(error_msg)
-        failed_task(result, error_msg)
+    # Check that expiration_days can be interpreted as a strictly positive
+    # integer.
+    if "expiration_days" not in event:
+        errors.append('Missing required key "expiration_days" in event.')
+    elif not event["expiration_days"]:
+        errors.append('"expiration_days" must be non-null.')
     else:
         try:
-            variable_error_msg = "numerator: %s, denominator: %s"
-            result["result"] = example_div(int(numerator), int(denominator))
+            tmp = int(event["expiration_days"])
+            if tmp <= 0:
+                errors.append('"expiration_days" must be a strictly positive integer.')
         except ValueError:
-            error_msg = "The provided values must be integers."
-            logging.error(error_msg)
-            logging.error(variable_error_msg, numerator, denominator)
-            failed_task(result, error_msg)
-        except ZeroDivisionError:
-            error_msg = "The denominator cannot be zero."
-            logging.error(error_msg)
-            logging.error(variable_error_msg, numerator, denominator)
-            failed_task(result, error_msg)
+            errors.append('"expiration_days" must be an integer.')
 
+    if errors:
+        result = False
+
+    return EventValidation(errors, event, result)
+
+
+def task_disable(event):
+    """Iterate over users and disable any inactive access.
+
+    :param event: The event dict that contains the parameters sent when
+    the function is invoked.
+    :return: The result of the action.
+    """
+    result: Dict[str, Union[Optional[str], bool]] = {"message": None, "success": True}
+
+    # Validate all event data before going any further
+    event_validation: EventValidation = validate_event_data(event)
+    if not event_validation.valid:
+        for e in event_validation.errors:
+            logging.error(e)
+        failed_task(result, " ".join(event_validation.errors))
+        return result
+    validated_event = event_validation.event
+
+    # The number of days after which unused access is considered inactive.
+    expiration_days: int = int(validated_event["expiration_days"])
+
+    # Create an IAM client
+    iam: boto3.client = boto3.client("iam")
+
+    # Determine the cutoff.  Any access not used after this datetime will be
+    # disabled.
+    #
+    # Note that Python requires a little trickery to create a datetime object
+    # with the current time _and_ the timezone information set to the local
+    # system timezone.
+    cutoff = datetime.now(timezone.utc).astimezone() - timedelta(days=expiration_days)
+
+    # Create a paginator for users
+    user_paginator = iam.get_paginator("list_users")
+
+    # Iterate over the users
+    for page in user_paginator.paginate():
+        for user in page["Users"]:
+            user_name = user["UserName"]
+            # This value may be None if the user has never logged in.
+            password_last_used = user.get("PasswordLastUsed", None)
+
+            login_profile = None
+            try:
+                login_profile = iam.get_login_profile(UserName=user_name)[
+                    "LoginProfile"
+                ]
+            except iam.exceptions.NoSuchEntityException:
+                logging.debug("User %s does not have console access.", user_name)
+
+            if login_profile:
+                logging.debug("Examining user %s's console access", user_name)
+                login_profile_create = login_profile["CreateDate"]
+
+                # This if skips any users that were created recently but have
+                # not yet logged in.  We don't want to disable their access
+                # yet.
+                if login_profile_create < cutoff:
+                    # Disable console access for any users who have never
+                    # logged in or have not logged in sufficiently recently.
+                    if password_last_used is None or password_last_used < cutoff:
+                        logging.info(
+                            "Disabling user %s's console access due to inactivity",
+                            user_name,
+                        )
+                        # Disable the user's console access
+                        iam.delete_login_profile(UserName=user_name)
+                else:
+                    logging.debug(
+                        "User %s's console access created too recently for inactivity to be determined.",
+                        user_name,
+                    )
+
+            # Create a paginator for the current user's access keys
+            access_key_paginator = iam.get_paginator("list_access_keys")
+
+            logging.debug("Examining user %s's access keys", user_name)
+            # Iterate over the access keys
+            for page in access_key_paginator.paginate(UserName=user_name):
+                for access_key in page["AccessKeyMetadata"]:
+                    access_key_id = access_key["AccessKeyId"]
+                    access_key_create = access_key["CreateDate"]
+                    # This value may be None if the user has never used this
+                    # access key.
+                    access_key_last_used = iam.get_access_key_last_used(
+                        AccessKeyId=access_key_id
+                    )["AccessKeyLastUsed"]["LastUsedDate"]
+
+                    # We can safely ignore any access keys that are already
+                    # inactive
+                    if access_key["Status"] == "Active":
+                        logging.debug(
+                            "Examining user %s's active access key %s",
+                            user_name,
+                            access_key_id,
+                        )
+
+                        # This if skips any access keys that were created
+                        # recently but have not yet been used.  We don't want
+                        # to disable such keys yet.
+                        if access_key_create < cutoff:
+                            # Disable access keys that have never been used or
+                            # that have not been used sufficiently recently.
+                            if (
+                                access_key_last_used is None
+                                or access_key_last_used < cutoff
+                            ):
+                                logging.info(
+                                    "Disabling user %s's access key %s due to inactivity",
+                                    user_name,
+                                    access_key_id,
+                                )
+                                # Make the access key inactive
+                                iam.update_access_key(
+                                    AccessKeyId=access_key_id,
+                                    Status="Inactive",
+                                    UserName=user_name,
+                                )
+                        else:
+                            logging.debug(
+                                "User %s's access key %s created too recently for inactivity to be determined.",
+                                user_name,
+                                access_key_id,
+                            )
+                    else:
+                        logging.debug(
+                            "User %s's access key %s is already inactive.",
+                            user_name,
+                            access_key_id,
+                        )
+
+    result["message"] = "Successfully disabled access for inactive IAM users."
+    logging.info(result["message"])
     return result
 
 
