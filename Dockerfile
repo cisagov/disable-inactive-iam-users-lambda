@@ -1,9 +1,5 @@
-ARG PY_VERSION=3.10
-
-FROM amazon/aws-lambda-python:$PY_VERSION as install-stage
-
-# Declare it a second time so it's brought into this scope.
-ARG PY_VERSION=3.10
+# The runtime tag must match the version of Python specified in the Pipfile.
+FROM amazon/aws-lambda-python:3.10 AS install-stage
 
 # Install the Python packages necessary to install the Lambda dependencies.
 RUN python3 -m pip install --no-cache-dir \
@@ -17,7 +13,7 @@ RUN python3 -m pip install --no-cache-dir \
 WORKDIR /tmp
 
 # Copy in the dependency files.
-COPY src/py$PY_VERSION/ .
+COPY build/Pipfile build/Pipfile.lock ./
 
 # Install the Lambda dependencies.
 #
@@ -25,7 +21,8 @@ COPY src/py$PY_VERSION/ .
 # underlying pip calls.
 RUN pipenv sync --system --extra-pip-args="--no-cache-dir --target ${LAMBDA_TASK_ROOT}"
 
-FROM amazon/aws-lambda-python:$PY_VERSION as build-stage
+# The runtime tag must match the version of Python specified in the Pipfile.
+FROM amazon/aws-lambda-python:3.10 AS build-stage
 
 ###
 # For a list of pre-defined annotation keys and value types see:
