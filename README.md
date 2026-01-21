@@ -1,6 +1,8 @@
 # disable-inactive-iam-users-lambda #
 
 [![GitHub Build Status](https://github.com/cisagov/disable-inactive-iam-users-lambda/workflows/build/badge.svg)](https://github.com/cisagov/disable-inactive-iam-users-lambda/actions)
+[![License](https://img.shields.io/github/license/cisagov/disable-inactive-iam-users-lambda)](https://spdx.org/licenses/)
+[![CodeQL](https://github.com/cisagov/disable-inactive-iam-users-lambda/workflows/CodeQL/badge.svg)](https://github.com/cisagov/disable-inactive-iam-users-lambda/actions/workflows/codeql-analysis.yml)
 
 This repository contains the code for an AWS Lambda function that
 disables access for users who have not used said access sufficiently
