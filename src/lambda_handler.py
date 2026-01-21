@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 import os
-from typing import Any, Dict, List, NamedTuple, Optional, Union
+from typing import Any, NamedTuple
 
 # Third-Party Libraries
 import boto3
@@ -17,8 +17,8 @@ logger.setLevel(default_log_level)
 class EventValidation(NamedTuple):
     """Named tuple to hold event validation information."""
 
-    errors: List[str]
-    event: Dict[str, Any]
+    errors: list[str]
+    event: dict[str, Any]
     valid: bool
 
 
@@ -40,7 +40,7 @@ def task_default(event):
     return result
 
 
-def validate_event_data(event: Dict[str, Any]) -> EventValidation:
+def validate_event_data(event: dict[str, Any]) -> EventValidation:
     """Validate the event data and return a tuple containing the validated event, a boolean result (True if valid, False if invalid), and a list of error message strings."""
     result = True
     errors = []
@@ -72,7 +72,7 @@ def task_disable(event):
     the function is invoked.
     :return: The result of the action.
     """
-    result: Dict[str, Union[Optional[str], bool]] = {"message": None, "success": True}
+    result: dict[str, str | None | bool] = {"message": None, "success": True}
 
     # Validate all event data before going any further
     event_validation: EventValidation = validate_event_data(event)
