@@ -33,7 +33,7 @@ def task_default(event):
     result = {}
     error_msg = 'Provided task "%s" is not supported.'
 
-    task = event.get("task", None)
+    task = event.get("task")
     logging.error(error_msg, task)
     failed_task(result, error_msg % task)
 
@@ -105,7 +105,7 @@ def task_disable(event):
         for user in page["Users"]:
             user_name = user["UserName"]
             # This value may be None if the user has never logged in.
-            password_last_used = user.get("PasswordLastUsed", None)
+            password_last_used = user.get("PasswordLastUsed")
 
             login_profile = None
             try:
