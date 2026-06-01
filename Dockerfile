@@ -3,7 +3,7 @@
 #
 # Official Docker images are in the form library/<app> while
 # non-official images are in the form <user>/<app>.
-FROM docker.io/amazon/aws-lambda-python:3.10 AS install-stage
+FROM public.ecr.aws/lambda/python:3.14 AS install-stage
 
 # Install the Python packages necessary to install the Lambda dependencies.
 RUN python3 -m pip install --no-cache-dir \
@@ -30,7 +30,7 @@ RUN pipenv sync --system --extra-pip-args="--no-cache-dir --target ${LAMBDA_TASK
 #
 # Official Docker images are in the form library/<app> while
 # non-official images are in the form <user>/<app>.
-FROM docker.io/amazon/aws-lambda-python:3.10 AS build-stage
+FROM public.ecr.aws/lambda/python:3.14 AS build-stage
 
 ###
 # For a list of pre-defined annotation keys and value types see:
@@ -40,7 +40,7 @@ LABEL org.opencontainers.image.authors="vm-dev@gwe.cisa.dhs.gov"
 LABEL org.opencontainers.image.vendor="Cybersecurity and Infrastructure Security Agency"
 
 # Declare it a third time so it's brought into this scope.
-ARG PY_VERSION=3.10
+ARG PY_VERSION=3.14
 
 # This must be present in the image to generate a deployment artifact.
 ENV BUILD_PY_VERSION=$PY_VERSION
