@@ -41,7 +41,12 @@ def task_default(event):
 
 
 def validate_event_data(event: dict[str, Any]) -> EventValidation:
-    """Validate the event data and return a tuple containing the validated event, a boolean result (True if valid, False if invalid), and a list of error message strings."""
+    """Validate event data.
+
+    Return: a tuple containing the validated event, a boolean result
+    (True if valid, False if invalid), and a list of error message
+    strings.
+    """
     result = True
     errors = []
 
@@ -134,7 +139,8 @@ def task_disable(event):
                         iam.delete_login_profile(UserName=user_name)
                 else:
                     logging.debug(
-                        "User %s's console access created too recently for inactivity to be determined.",
+                        "User %s's console access created too recently for "
+                        "inactivity to be determined.",
                         user_name,
                     )
 
@@ -173,7 +179,8 @@ def task_disable(event):
                                 or access_key_last_used < cutoff
                             ):
                                 logging.info(
-                                    "Disabling user %s's access key %s due to inactivity",
+                                    "Disabling user %s's access key %s due to "
+                                    "inactivity",
                                     user_name,
                                     access_key_id,
                                 )
@@ -185,7 +192,8 @@ def task_disable(event):
                                 )
                         else:
                             logging.debug(
-                                "User %s's access key %s created too recently for inactivity to be determined.",
+                                "User %s's access key %s created too recently "
+                                "for inactivity to be determined.",
                                 user_name,
                                 access_key_id,
                             )

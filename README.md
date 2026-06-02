@@ -79,7 +79,7 @@ pipenv lock
 ## Lambda inputs ##
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | expiration_days | A strictly positive integer denoting the number of days after which an IAM user's access is considered inactive if unused. | `number` | n/a | yes |
 
 ## Example Lambda input ##
